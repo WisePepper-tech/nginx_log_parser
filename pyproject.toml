@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nginx_parser"
+version = "1.0.0"
+description = "Script for parsing nginx logs"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "WisePepper-tech"}]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+nginx_parser = "nginx_parser:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*"]
