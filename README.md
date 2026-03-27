@@ -1,4 +1,4 @@
-# nginx-ip-parser
+# nginx-parser
 
 A lightweight CLI tool for extracting and analyzing IP addresses from nginx access logs.
 Detects suspicious activity, classifies public and private addresses, and enriches flagged IPs with geolocation data.
@@ -164,14 +164,13 @@ services:
 ```
 ---
 
-2. **Run the analysis**:
-# Default run
+### Default run
 ```bash
 docker-compose up
 ```
 ---
 
-# Custom log file
+### Custom log file
 The log file path inside the container is always `/data/input.log`.
 Use `LOG_SOURCE` to specify which file from the host to mount there:
 ```bash
@@ -183,7 +182,7 @@ LOG_SOURCE=/var/log/nginx/access.log docker-compose up
 ```
 ---
 
-3. **Running with Docker CLI**:
+### Running with Docker CLI
 ```bash
 docker run --rm \
   --read-only --cap-drop=ALL --security-opt=no-new-privileges \
@@ -194,7 +193,7 @@ docker run --rm \
 ```
 ---
 
-### Installation & Setup
+## Installation & Setup
 1. **Clone the repository**:
 ```bash
 git clone https://github.com/WisePepper-tech/nginx-ip-parser.git
@@ -278,7 +277,7 @@ cosign verify \
   ghcr.io/wisepepper-tech/nginx-ip-parser:latest
 ```
 
-### Log Rotation (Optional)
+## Log Rotation (Optional)
 To prevent the NDJSON report from growing indefinitely, you can use `logrotate`. 
 Create `/etc/logrotate.d/nginx-parser`:
 

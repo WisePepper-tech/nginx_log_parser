@@ -1,9 +1,6 @@
 [tool.ruff]
-line-length = 88
-target-version = "py313"
-
-[tool.ruff.lint]
-select = ["E", "F", "B", "I"] # Ошибки, логика, импорты
+# Exclude a variety of commonly ignored directories.
+select = ["E", "F", "B", "I"]
 exclude = [
     ".bzr",
     ".direnv",
@@ -33,6 +30,14 @@ exclude = [
     "venv",
 ]
 
+# Same as Black.
+line-length = 88
+
+# Assume Python 3.13
+target-version = "py313"
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
