@@ -1,5 +1,8 @@
-[tool]
-select = ["E", "F", "B", "I"]
+line-length = 88
+target-version = "py313"
+
+[lint]
+select = ["E", "F", "B", "I", "S", "UP", "T20", "SIM"]
 exclude = [
     ".bzr",
     ".direnv",
@@ -29,11 +32,9 @@ exclude = [
     "venv",
 ]
 
-line-length = 88
+ignore = ["S310"]
 
-target-version = "py313"
-
-[tool.ruff.format]
+[format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
