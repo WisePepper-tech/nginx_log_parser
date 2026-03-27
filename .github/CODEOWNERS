@@ -1,0 +1,6 @@
+# Security for dependency changes 
+* @WisePepper-tech
+.github/workflows/ @WisePepper-tech
+requirements*.txt @WisePepper-tech
+pyproject.toml @WisePepper-tech
+Dockerfile @WisePepper-tech

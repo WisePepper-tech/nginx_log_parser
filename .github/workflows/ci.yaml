@@ -1,0 +1,419 @@
+name: CI_PARSER_IP
+
+on:
+  push:
+    branches: [main, features]
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -Eeuo pipefail {0}  # Strict bash
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Assert runner OS
+        run: |
+          if [ "${RUNNER_OS}" != "Linux" ]; then
+            echo "Unsupported OS: ${RUNNER_OS}"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip==26.0.1
+
+      - name: Install dependencies
+        run: |
+          pip install --require-hashes -r requirements-dev.txt
+          
+      - name: Run tests
+        env:
+          PYTHONHASHSEED: "0"
+        run: pytest -q --disable-warnings --maxfail=1 --cov=. --cov-report=xml
+
+      - name: Upload coverage report
+        id: upload
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 1
+
+  checks:
+    needs: tests
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+        - name: Assert runner OS
+          run: |
+            if [ "${RUNNER_OS}" != "Linux" ]; then
+              echo "Unsupported OS: ${RUNNER_OS}"
+              exit 1
+            fi
+
+        - name: Checkout repository
+          uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+        - name: Setup Python
+          uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+          with:
+            python-version: "3.13"
+            cache: pip
+
+        - name: Upgrade pip
+          run: python -m pip install --upgrade pip==26.0.1
+
+        - name: Install dependencies
+          run: pip install --require-hashes -r requirements-dev.txt
+
+        - name: Verify commit (PR)
+          if: |
+            github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.fork == false
+          env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            KEY_URL="https://github.com/${{ github.event.pull_request.head.repo.owner.login }}.gpg"
+            curl --proto "=https" --tlsv1.2 -sL "$KEY_URL" | gpg --import
+            git verify-commit ${{ github.event.pull_request.head.sha }}
+        
+        - name: Verify commit (push)
+          if: github.event_name == 'push'
+          run: |
+            curl --proto "=https" --tlsv1.2 -sL "https://github.com/${{ github.repository_owner }}.gpg" | gpg --import
+            git verify-commit ${{ github.sha }}
+        
+        - name: License Check  # pip-licenses==4.3.3
+          run: |
+            pip install --require-hashes -r requirements-dev.txt
+            pip install --require-hashes -r requirements-security.txt
+            pip-licenses --format=json --output-file=licenses.json
+            pip-licenses --fail-on="GPL;AGPL"
+      
+        - name: Install project
+          run: |
+            pip install --no-deps -e .
+
+        - name: Ruff check
+          run: |
+            curl --proto "=https" --tlsv1.2 -fsSL -o ruff.tar.gz \
+              https://releases.astral.sh/github/ruff/releases/download/0.15.7/ruff-x86_64-unknown-linux-gnu.tar.gz
+            echo "2253ba7f064023def4b77aaef127756d3724e92a0fc69d666d4692f5c019af6d ruff.tar.gz" | sha256sum -c
+            tar -xzf ruff.tar.gz ruff-x86_64-unknown-linux-gnu/ruff
+            ./ruff-x86_64-unknown-linux-gnu/ruff check .
+
+  security:
+    needs: [tests, checks]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Assert runner OS
+        run: |
+          if [ "${RUNNER_OS}" != "Linux" ]; then
+            echo "Unsupported OS: ${RUNNER_OS}"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip==26.0.1
+
+      - name: Install audit tools
+        run: pip install --require-hashes -r requirements-security.txt
+
+      - name: Dependencies audit  # v2.10.0
+        run: |
+          pip-audit --strict -r requirements-dev.txt
+          pip-audit --strict -r requirements-security.txt
+          pip-audit --strict -r requirements-sbom.txt
+
+      - name: Bandit Scan  # v1.9.4
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == false
+        run: bandit -r . -ll -ii --exclude ./tests
+
+      - name: Trivy FS scan  # v0.69.3
+        run: |
+          curl --proto "=https" --tlsv1.2 -fsSL -o trivy.tar.gz \
+            https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz
+          echo "1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75  trivy.tar.gz" | sha256sum -c
+          tar -xzf trivy.tar.gz trivy
+          ./trivy fs \
+            --severity CRITICAL,HIGH \
+            --exit-code 1 \
+            --ignore-unfixed \
+            .
+
+  dependency_guard:
+    needs: security
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Assert runner OS
+        run: |
+          if [ "${RUNNER_OS}" != "Linux" ]; then
+            echo "Unsupported OS: ${RUNNER_OS}"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Detect dependency change
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }} \
+            | grep -E 'requirements|pyproject' || true)
+          if [ -n "$CHANGED" ]; then
+            echo "DEPENDENCY_CHANGED=true" >> $GITHUB_ENV
+            echo "Changed files:"
+            echo "$CHANGED"
+          fi
+
+      - name: Block on dependency change
+        if: env.DEPENDENCY_CHANGED == 'true'
+        run: |
+          echo "::error::Dependency change detected — manual review required"
+          echo "::error::Files changed: requirements*.txt or pyproject.toml"
+          exit 1
+
+  build:  # Containers
+    needs: [security, dependency_guard]
+    if: |
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.security.result == 'success' &&
+      (needs.dependency_guard.result == 'success' || needs.dependency_guard.result == 'skipped')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      packages: write
+    outputs:
+      pushed_digest: ${{ steps.push_image.outputs.pushed_digest }}
+    steps:
+      - name: Assert runner OS
+        run: |
+          if [ "${RUNNER_OS}" != "Linux" ]; then
+            echo "Unsupported OS: ${RUNNER_OS}"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup Python for Vendoring
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          cache: pip
+          python-version: "3.13"
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip==26.0.1
+
+      - name: Download dependencies (Vendoring)
+        run: |
+          mkdir wheels
+          pip download -r requirements-dev.txt -d wheels --require-hashes
+          echo "Downloaded wheels:"
+          ls -la wheels/
+          test -n "$(ls -A wheels/)" || { echo "ERROR: wheels directory is empty"; exit 1; }
+
+      - name: Install conftest
+        env:
+          CONFTEST_VERSION: "0.66.0"
+        run: |
+          curl --proto "=https" --tlsv1.2 -L -o conftest.tar.gz \
+            "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          echo "7e717adada4ca64e600bdb86b789cbcc279215b3296e238bc291acbb81361d6f  conftest.tar.gz" | sha256sum -c
+          tar -xzf conftest.tar.gz conftest
+          mv conftest /usr/local/bin/
+          rm conftest.tar.gz
+
+      - name: Login to GHCR
+        if: github.event_name == 'push'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Check Dockerfile policy
+        run: conftest test Dockerfile --policy policy/
+
+      - name: Build Image
+        id: build_image
+        if: github.event_name == 'push'
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build \
+            --network=none \
+            --pull=true \
+            --no-cache \
+            --build-arg PIP_FIND_LINKS=/app/wheels \
+            -t ghcr.io/${REPO}:${{ github.sha }} \
+            --metadata-file build-metadata.json \
+            .
+          BUILD_DIGEST=$(jq -r '."containerimage.digest"' build-metadata.json)
+          echo "build_digest=${BUILD_DIGEST}" >> $GITHUB_OUTPUT
+
+      - name: Trivy Image Scan  # v0.69.3
+        if: github.event_name == 'push'
+        run: |
+          curl --proto "=https" --tlsv1.2 -fsSL -o trivy.tar.gz \
+            https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz
+          echo "1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75  trivy.tar.gz" | sha256sum -c
+          tar -xzf trivy.tar.gz trivy
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          ./trivy image \
+            --severity CRITICAL,HIGH \
+            --exit-code 1 \
+            --ignore-unfixed \
+            ghcr.io/${REPO}:${{ github.sha }}
+
+      - name: Push image
+        id: push_image
+        if: github.event_name == 'push'
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker push ghcr.io/${REPO}:${{ github.sha }}
+          PUSHED_DIGEST=$(docker buildx imagetools inspect \
+            ghcr.io/${REPO}:${{ github.sha }} \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "pushed_digest=${PUSHED_DIGEST}" >> $GITHUB_OUTPUT
+
+  attest_and_signing:
+    needs: build
+    environment: production
+    if: |
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.build.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+      packages: write
+      attestations: write
+    steps:
+      - name: Assert runner OS
+        run: |
+          if [ "${RUNNER_OS}" != "Linux" ]; then
+            echo "Unsupported OS: ${RUNNER_OS}"
+            exit 1
+          fi
+          
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip==26.0.1
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad  # v4.0.0
+        with:
+          cosign-release: 'v3.0.5'
+
+      - name: Get digest from registry
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          DIGEST=$(docker buildx imagetools inspect ghcr.io/${REPO}:${{ github.sha }} \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')
+          if [ -z "$DIGEST" ]; then
+            echo "ERROR: Failed to get image digest"
+            exit 1
+          fi
+          echo "DIGEST=$DIGEST" >> $GITHUB_ENV
+          echo "REPO=${REPO}" >> $GITHUB_ENV
+
+      - name: Verify image integrity
+        run: |
+          PUSHED="${{ needs.build.outputs.pushed_digest }}"
+          REGISTRY="${{ env.DIGEST }}"
+          if [ "${PUSHED}" != "${REGISTRY}" ]; then
+            echo "ERROR: Image digest mismatch!"
+            echo "Pushed:   ${PUSHED}"
+            echo "Registry: ${REGISTRY}"
+            exit 1
+          fi
+          echo "Digest verified: ${REGISTRY}"
+
+      - name: Generate SBOM  # v4.4.0
+        run: |
+          pip install --require-hashes -r requirements-sbom.txt
+          cyclonedx-py requirements requirements-dev.txt -o sbom.json
+
+      - name: Attest SBOM
+        run: |
+          cosign attest \
+            --yes \
+            --predicate sbom.json \
+            --type cyclonedx \
+            ghcr.io/${{ env.REPO }}@${{ env.DIGEST }}
+
+      - name: SLSA
+        if: github.ref == 'refs/heads/main'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+        with:
+          subject-name: ghcr.io/${{ env.REPO }}
+          subject-digest: ${{ env.DIGEST }}
+          push-to-registry: true
+
+      - name: Sign image (keyless)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cosign sign \
+            --yes \
+            ghcr.io/${{ env.REPO }}@${{ env.DIGEST }}
+
+      - name: Cosign verify
+        run: |
+          cosign verify \
+            --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            ghcr.io/${{ env.REPO }}@${{ env.DIGEST }}
