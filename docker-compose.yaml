@@ -1,0 +1,26 @@
+services:
+  parser:
+    build: .
+    image: smart-backup-parser:v1.0.0
+    user: "10001:10001"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      - LOG_SOURCE=data/current.log
+      - OUTPUT_FORMAT=ndjson
+      - THRESHOLD_PUB=30
+      - THRESHOLD_PRIV=100
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    volumes:
+      - ${LOG_SOURCE:-./data/current.log}:/data/input.log:ro
+      - ./reports:/reports:rw
+    command: >
+      --file /data/input.log  --output /reports/report.${OUTPUT_FORMAT}  --threshold_public ${THRESHOLD_PUB} --threshold_private ${THRESHOLD_PRIV}
