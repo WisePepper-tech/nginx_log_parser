@@ -1,0 +1,47 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+
+# Secrets and local config
+.env
+.env.*
+!example.env
+secret.yaml
+*secret.yaml
+secret*.yaml
+
+# Project specific
+test_sandbox/
+cloud_temp/
+wheels/
+reports/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+*.ndjson
+
+# Test cache
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
