@@ -1,4 +1,4 @@
-# Exclude a variety of commonly ignored directories.
+[tool]
 select = ["E", "F", "B", "I"]
 exclude = [
     ".bzr",
@@ -29,10 +29,8 @@ exclude = [
     "venv",
 ]
 
-# Same as Black.
 line-length = 88
 
-# Assume Python 3.13
 target-version = "py313"
 
 [tool.ruff.format]
