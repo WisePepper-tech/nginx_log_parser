@@ -122,7 +122,8 @@ jobs:
               https://releases.astral.sh/github/ruff/releases/download/0.15.7/ruff-x86_64-unknown-linux-gnu.tar.gz
             echo "2253ba7f064023def4b77aaef127756d3724e92a0fc69d666d4692f5c019af6d ruff.tar.gz" | sha256sum -c
             tar -xzf ruff.tar.gz ruff-x86_64-unknown-linux-gnu/ruff
-            ./ruff-x86_64-unknown-linux-gnu/ruff check .
+            mv ruff-x86_64-unknown-linux-gnu/ruff ./ruff
+            ./ruff check .
 
   security:
     needs: [tests, checks]
