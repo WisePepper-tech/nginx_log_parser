@@ -1,5 +1,5 @@
 # Using a specific hash of an image to protect against Supply Chain attacks
-FROM python:3.13-slim@sha256:a208155746991fb5c4baf3c501401c3fee09e814ab0e5121a0f53b2ca659e0e2 AS builder
+FROM python:3.13-slim@sha256:739e7213785e88c0f702dcdc12c0973afcbd606dbf021a589cab77d6b00b579d AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY requirements-dev.txt .
 RUN pip install --no-index --find-links="${PIP_FIND_LINKS}" --user --require-hashes -r requirements-dev.txt
 
 # The final image (Runtime)
-FROM python:3.13-slim@sha256:a208155746991fb5c4baf3c501401c3fee09e814ab0e5121a0f53b2ca659e0e2
+FROM python:3.13-slim@sha256:739e7213785e88c0f702dcdc12c0973afcbd606dbf021a589cab77d6b00b579d
 
 # Creating a non-root user and /data folder with correct permissions
 RUN groupadd -g 10001 appgroup && \
