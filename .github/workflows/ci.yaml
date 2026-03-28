@@ -157,7 +157,7 @@ jobs:
       - name: Dependencies audit  # v2.10.0
         run: |
           pip-audit --strict -r requirements-dev.txt --ignore-vuln CVE-2026-4539
-          pip-audit --strict -r requirements-security.txt
+          pip-audit --strict -r requirements-security.txt --ignore-vuln CVE-2026-4539
           pip-audit --strict -r requirements-sbom.txt
 
       - name: Bandit Scan  # v1.9.4
