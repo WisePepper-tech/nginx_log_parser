@@ -1,10 +1,10 @@
-import re
 import argparse
 import contextlib
-import time
 import json
-import urllib.request
 import logging
+import re
+import time
+import urllib.request
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -33,9 +33,7 @@ def is_private(ip):
             return True
         if a == 172 and 16 <= b <= 31:
             return True
-        if a == 192 and b == 168:
-            return True
-        return False
+        return a == 192 and b == 168
     except ValueError:
         return None
 
@@ -75,11 +73,18 @@ def main():
     parser.add_argument("--output", help="Save report to file. Recommended: .ndjson.")
     parser.add_argument(
         "--threshold_public",
-        help="Request count threshold for suspicious public IP detection (default: 10). Threshold counts total requests per log file, not per minute.",
+        help=(
+            "Request count threshold for suspicious public IP detection (default: 10)."
+            "Threshold counts total requests per log file, not per minute."
+        ),
     )
     parser.add_argument(
         "--threshold_private",
-        help="Request count threshold for suspicious private IP detection. Optional, disabled by default. Threshold counts total requests per log file, not per minute.",
+        help=(
+            "Request count threshold for suspicious private IP detection. "
+            "Optional, disabled by default. "
+            "Threshold counts total requests per log file, not per minute."
+        ),
     )
     args = parser.parse_args()
 

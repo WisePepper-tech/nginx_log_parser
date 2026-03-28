@@ -1,9 +1,13 @@
-import pytest
 import subprocess
 import sys
-from nginx_parser import extract_valid_ips, is_private, is_suspicious, get_geo
-from hypothesis import given, strategies as st
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+
+from nginx_parser import extract_valid_ips, get_geo, is_private, is_suspicious
+
 
 @pytest.mark.parametrize("ip, expected", [
     ("10.0.0.1", True),
@@ -14,17 +18,17 @@ def test_is_private(ip, expected):
     assert is_private(ip) == expected
 
 def test_extract_two_ips():
-    ips_examples_two_in_line = str("203.0.113.45, 131.107.0.89")
+    ips_examples_two_in_line = "203.0.113.45, 131.107.0.89"
     result = extract_valid_ips(ips_examples_two_in_line)
     assert result == ["203.0.113.45", "131.107.0.89"]
 
 def test_extract_invalid_octet():
-    invalid_ip = str("999.888.777.666")
+    invalid_ip = "999.888.777.666"
     result = extract_valid_ips(invalid_ip)
     assert result == []
 
 def test_extract_no_ip():
-    no_ip = str("0.0.pass_number.189")
+    no_ip = "0.0.pass_number.189"
     result = extract_valid_ips(no_ip)
     assert result == []
 
