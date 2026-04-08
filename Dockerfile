@@ -28,7 +28,7 @@ ENV PYTHONUNBUFFERED=1
 
 USER appuser
 
-ENTRYPOINT ["python", "nginx_parser.py"]
+ENTRYPOINT ["python", "nginx_log_parser.py"]
 
 # --file is required flag, see "docker-compose.yaml" for settings flags
 CMD ["--help"]

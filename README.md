@@ -1,4 +1,4 @@
-# nginx-parser
+# nginx_log_parser
 
 A lightweight CLI tool for extracting and analyzing IP addresses from nginx access logs.
 Detects suspicious activity, classifies public and private addresses, and enriches flagged IPs with geolocation data.
@@ -26,24 +26,24 @@ Python 3.10+ — standard library only, no external dependencies.
 
 **Full configuration:**
 ```bash
-python nginx_parser.py --file nginx.log --output report.ndjson --threshold_public 10 --threshold_private 50
+python nginx_log_parser.py --file nginx.log --output report.ndjson --threshold_public 10 --threshold_private 50
 ```
 
 **Public IPs only (private threshold disabled):**
 ```bash
-python nginx_parser.py --file nginx.log --output report.ndjson --threshold_public 10
+python nginx_log_parser.py --file nginx.log --output report.ndjson --threshold_public 10
 ```
 Private IPs will appear in the report but `suspicious` will always be `false`.
 
 **Defaults only:**
 ```bash
-python nginx_parser.py --file nginx.log --output report.ndjson
+python nginx_log_parser.py --file nginx.log --output report.ndjson
 ```
 Default: public threshold = 10, private threshold = disabled.
 
 **Console output only (no file):**
 ```bash
-python nginx_parser.py --file nginx.log
+python nginx_log_parser.py --file nginx.log
 ```
 
 ---
@@ -138,7 +138,7 @@ docker-compose up
 services:
   parser:
     build: .
-    image: smart-backup-parser:v1.0.0
+    image: nginx_log_parser:v1.0.0
     user: "10001:10001"
     security_opt:
       - no-new-privileges:true
@@ -188,7 +188,7 @@ docker run --rm \
   --read-only --cap-drop=ALL --security-opt=no-new-privileges \
   -v $(pwd)/logs:/data:ro \
   -v $(pwd)/reports:/reports:rw \
-  nginx-ip-parser:v1.0.0 \
+  nginx_log_parser:v1.0.0 \
   --file /data/input.log --output /reports/result.ndjson
 ```
 ---
@@ -196,8 +196,8 @@ docker run --rm \
 ## Installation & Setup
 1. **Clone the repository**:
 ```bash
-git clone https://github.com/WisePepper-tech/nginx-ip-parser.git
-cd nginx-ip-parser
+git clone https://github.com/WisePepper-tech/nginx_log_parser.git
+cd nginx_log_parser
 ```
 ---
 
@@ -225,7 +225,7 @@ docker build \
   --network=none \
   --pull=true \
   --build-arg PIP_FIND_LINKS=/app/wheels \
-  -t nginx-ip-parser:local .
+  -t nginx_log_parser:local .
 ```
 ---
 
@@ -274,12 +274,12 @@ You can verify the integrity of the official images using Cosign:
 cosign verify \
   --certificate-identity-regexp="https://github.com/WisePepper-tech/*" \
   --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-  ghcr.io/wisepepper-tech/nginx-ip-parser:latest
+  ghcr.io/wisepepper-tech/nginx_log_parser:latest
 ```
 
 ## Log Rotation (Optional)
 To prevent the NDJSON report from growing indefinitely, you can use `logrotate`. 
-Create `/etc/logrotate.d/nginx-parser`:
+Create `/etc/logrotate.d/nginx_log_parser`:
 
 ```text
 /absolute/path/to/reports/*.ndjson {

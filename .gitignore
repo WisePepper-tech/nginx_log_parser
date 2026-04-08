@@ -21,6 +21,7 @@ test_sandbox/
 cloud_temp/
 wheels/
 reports/
+.hypothesis/
 
 # Build artifacts
 build/
