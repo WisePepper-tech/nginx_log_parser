@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 
 from nginx_log_parser import (
     extract_valid_ips,
