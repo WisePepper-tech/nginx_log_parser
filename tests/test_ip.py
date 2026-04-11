@@ -1,19 +1,19 @@
 import subprocess
 import sys
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from datetime import datetime
 
 from nginx_log_parser import (
+    extract_timestamp,
     extract_valid_ips,
     get_geo,
     is_private,
     is_suspicious,
     parse_log_file,
-    extract_timestamp,
 )
 
 

@@ -1,5 +1,4 @@
 import argparse
-import contextlib
 import json
 import logging
 import re
@@ -185,7 +184,7 @@ def main() -> None:
         with open(args.output, "a", encoding="utf-8") as f:
             f.write(json.dumps(report, ensure_ascii=False) + "\n")
     else:
-        print(json.dumps(report, ensure_ascii=False, indent=2))
+        print(json.dumps(report, ensure_ascii=False, indent=2))  # noqa: T201
 
 
 if __name__ == "__main__":
